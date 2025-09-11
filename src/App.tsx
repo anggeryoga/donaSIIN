@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Heart, Users, TrendingUp, Calendar, Shield, Award } from 'lucide-react';
 import DonationForm from './components/DonationForm';
 import TransparencyTable from './components/TransparencyTable';
@@ -7,6 +7,7 @@ import Timeline from './components/Timeline';
 import AdminLogin from './components/AdminLogin';
 import AdminDashboard from './components/AdminDashboard';
 import { supabase } from './lib/supabase';
+import type { Session } from '@supabase/supabase-js';
 
 type User = {
   id: string;
@@ -21,13 +22,14 @@ function App() {
 
   useEffect(() => {
     // Check current session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
+      const { session } = data;
       setUser(session?.user as User || null);
       setLoading(false);
     });
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session: Session | null) => {
       setUser(session?.user as User || null);
     });
 
