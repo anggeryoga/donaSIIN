@@ -33,8 +33,7 @@ export default function ProgressBar() {
       const { data: targetData } = await supabase
         .from('weekly_targets')
         .select('*')
-        .eq('week_start', weekStart.toISOString().split('T')[0])
-        .single();
+        .eq('week_start', weekStart.toISOString().split('T')[0]);
 
       // Fetch current week's donations
       const { data: donationsData } = await supabase
@@ -46,7 +45,7 @@ export default function ProgressBar() {
 
       const currentAmount = donationsData?.reduce((sum, d) => sum + d.amount, 0) || 0;
       const donorCount = new Set(donationsData?.map(d => d.donor_name)).size;
-      const targetAmount = targetData?.target_amount || 1000000; // Default 1M
+      const targetAmount = targetData && targetData.length > 0 ? targetData[0].target_amount : 1000000; // Default 1M
       const percentage = Math.min((currentAmount / targetAmount) * 100, 100);
 
       setCurrentWeek({
@@ -58,30 +57,41 @@ export default function ProgressBar() {
         percentage
       });
 
-      // Fetch recent weeks for history
+      // Fetch recent weeks for history - separate queries to avoid foreign key issues
       const { data: recentData } = await supabase
         .from('weekly_targets')
-        .select(`
-          *,
-          donations!inner(amount, donor_name)
-        `)
+        .select('*')
         .order('week_start', { ascending: false })
         .limit(4);
 
-      const recentWeeksData = recentData?.map(week => {
-        const weekDonations = week.donations || [];
-        const amount = weekDonations.reduce((sum: number, d: any) => sum + d.amount, 0);
-        const donors = new Set(weekDonations.map((d: any) => d.donor_name)).size;
-        
-        return {
-          week_start: week.week_start,
-          week_end: week.week_end,
-          target_amount: week.target_amount,
-          current_amount: amount,
-          donor_count: donors,
-          percentage: Math.min((amount / week.target_amount) * 100, 100)
-        };
-      }) || [];
+      // Fetch all donations for recent weeks
+      const recentWeeksData: WeeklyProgress[] = [];
+      
+      if (recentData && recentData.length > 0) {
+        for (const week of recentData) {
+          const weekStartDate = new Date(week.week_start + 'T00:00:00.000Z');
+          const weekEndDate = new Date(week.week_end + 'T23:59:59.999Z');
+          
+          const { data: weekDonations } = await supabase
+            .from('donations')
+            .select('amount, donor_name')
+            .eq('status', 'success')
+            .gte('created_at', weekStartDate.toISOString())
+            .lte('created_at', weekEndDate.toISOString());
+          
+          const amount = weekDonations?.reduce((sum, d) => sum + d.amount, 0) || 0;
+          const donors = new Set(weekDonations?.map(d => d.donor_name)).size;
+          
+          recentWeeksData.push({
+            week_start: week.week_start,
+            week_end: week.week_end,
+            target_amount: week.target_amount,
+            current_amount: amount,
+            donor_count: donors,
+            percentage: Math.min((amount / week.target_amount) * 100, 100)
+          });
+        }
+      }
 
       setRecentWeeks(recentWeeksData);
     } catch (error) {
