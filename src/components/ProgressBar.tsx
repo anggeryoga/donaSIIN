@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Target, Calendar, Users, TrendingUp } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -231,7 +231,7 @@ export default function ProgressBar() {
           </h3>
 
           <div className="space-y-4">
-            {recentWeeks.map((week) => (
+            {recentWeeks.map((week, index) => (
               <div key={week.week_start} className="border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-3">
                   <div>
