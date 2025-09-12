@@ -2,15 +2,10 @@ import { useState, useEffect } from 'react';
 import { 
   Users, 
   DollarSign, 
-  TrendingUp, 
-  Calendar, 
   CheckCircle, 
   XCircle, 
   Clock,
   Eye,
-  Upload,
-  Plus,
-  BarChart3,
   FileText
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
